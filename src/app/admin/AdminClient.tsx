@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import Flag from '@/components/Flag'
 
@@ -25,6 +25,16 @@ interface Match {
   away_score: number | null
 }
 
+interface Suggestion {
+  matchId: number
+  matchNumber: number
+  homeTeam: Team
+  awayTeam: Team
+  homeScore: number
+  awayScore: number
+  status: string
+}
+
 interface Props {
   matches: Match[]
   aiMap: Record<number, string>
@@ -42,7 +52,7 @@ const PHASES = [
   { key: 'final', label: 'Final' },
 ]
 
-const TABS = ['pronósticos', 'resultados', 'eliminatorias'] as const
+const TABS = ['pronósticos', 'resultados', 'sincronizar', 'eliminatorias'] as const
 type Tab = typeof TABS[number]
 
 const formatDate = (date: string) =>
@@ -80,6 +90,59 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
   const [eliminatoriaPhase, setEliminatoriaPhase] = useState('dieciseisavos')
   const [savingAssign, setSavingAssign] = useState<number | null>(null)
   const [assignErrors, setAssignErrors] = useState<Record<number, string>>({})
+
+  // Estados para sync
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [loadingSync, setLoadingSync] = useState(false)
+  const [syncError, setSyncError] = useState('')
+  const [acceptingSuggestion, setAcceptingSuggestion] = useState<number | null>(null)
+  const [acceptedSuggestion, setAcceptedSuggestion] = useState<Record<number, boolean>>({})
+
+  const fetchSuggestions = async () => {
+    setLoadingSync(true)
+    setSyncError('')
+    try {
+      const res = await fetch('/api/sync-football')
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncError(data.error ?? 'Error al consultar')
+      } else {
+        setSuggestions(data.suggestions ?? [])
+      }
+    } catch {
+      setSyncError('Error de conexión')
+    } finally {
+      setLoadingSync(false)
+    }
+  }
+
+  // Cargar sugerencias al abrir el tab
+  useEffect(() => {
+    if (activeTab === 'sincronizar') {
+      fetchSuggestions()
+    }
+  }, [activeTab])
+
+  const handleAcceptSuggestion = async (s: Suggestion) => {
+    setAcceptingSuggestion(s.matchId)
+    try {
+      const res = await fetch('/api/update-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId: s.matchId,
+          homeScore: s.homeScore,
+          awayScore: s.awayScore,
+        }),
+      })
+      if (res.ok) {
+        setAcceptedSuggestion(prev => ({ ...prev, [s.matchId]: true }))
+        setTimeout(() => fetchSuggestions(), 1500)
+      }
+    } finally {
+      setAcceptingSuggestion(null)
+    }
+  }
 
   const handleGenerate = async (matchId: number) => {
     setGenerating(prev => ({ ...prev, [matchId]: true }))
@@ -170,6 +233,13 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
     : filteredMatches
   const pendingInView = groupMatches.filter(m => !generated[m.id])
 
+  const tabLabel = (tab: Tab) => {
+    if (tab === 'pronósticos') return '🤖 IA'
+    if (tab === 'resultados') return '⚽ Resultados'
+    if (tab === 'sincronizar') return '🔄 Sincronizar'
+    return '🏆 Llaves'
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={username} isAdmin={true} />
@@ -179,7 +249,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           Panel de Administración
         </h2>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 20px' }}>
-          Pronósticos IA, resultados y eliminatorias
+          Pronósticos IA, resultados, sincronización y eliminatorias
         </p>
 
         {/* Stats */}
@@ -198,7 +268,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </div>
         </div>
 
-        {/* Tabs principales */}
+        {/* Tabs */}
         <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
           {TABS.map(tab => (
             <button
@@ -216,13 +286,13 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                 border: '1px solid var(--border-subtle)',
               }}
             >
-              {tab === 'pronósticos' ? '🤖 IA' : tab === 'resultados' ? '⚽ Resultados' : '🏆 Llaves'}
+              {tabLabel(tab)}
             </button>
           ))}
         </div>
 
-        {/* Tabs de fase */}
-        {activeTab !== 'eliminatorias' && (
+        {/* Tabs de fase (solo para algunos tabs) */}
+        {(activeTab === 'pronósticos' || activeTab === 'resultados') && (
           <>
             <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '12px', paddingBottom: '4px' }}>
               {PHASES.map(phase => (
@@ -317,12 +387,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                 const isGenerating = generating[match.id]
 
                 return (
-                  <div key={match.id} style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                  }}>
+                  <div key={match.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{match.match_number}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
@@ -339,7 +404,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                         <Flag code={match.away_team?.code} size={20} />
                       </div>
                     </div>
-
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', gap: '8px', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
@@ -453,6 +517,117 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
               )
             })}
           </div>
+        )}
+
+        {/* TAB: SINCRONIZAR */}
+        {activeTab === 'sincronizar' && (
+          <>
+            <div style={{
+              background: 'rgba(50, 98, 149, 0.08)',
+              border: '1px solid rgba(50, 98, 149, 0.2)',
+              borderRadius: '10px',
+              padding: '12px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}>
+              <p style={{ fontSize: '12px', color: 'var(--fifa-blue)', margin: 0 }}>
+                💡 Resultados finalizados según football-data.org pendientes en tu BD
+              </p>
+              <button
+                onClick={fetchSuggestions}
+                disabled={loadingSync}
+                style={{
+                  background: 'var(--fifa-blue)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  opacity: loadingSync ? 0.5 : 1,
+                }}
+              >
+                {loadingSync ? '⏳' : '🔄'} Refrescar
+              </button>
+            </div>
+
+            {syncError && (
+              <p style={{ fontSize: '12px', color: 'var(--fifa-red)', marginBottom: '12px' }}>{syncError}</p>
+            )}
+
+            {loadingSync ? (
+              <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '24px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', margin: 0 }}>Consultando football-data.org...</p>
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '32px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 6px' }}>
+                  ✓ Todo sincronizado
+                </p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
+                  No hay partidos pendientes con resultado disponible
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {suggestions.map(s => {
+                  const isAccepting = acceptingSuggestion === s.matchId
+                  const isAccepted = acceptedSuggestion[s.matchId]
+
+                  return (
+                    <div key={s.matchId} style={{
+                      background: isAccepted ? 'rgba(0, 168, 89, 0.08)' : 'var(--bg-surface)',
+                      border: `1px solid ${isAccepted ? 'rgba(0, 168, 89, 0.3)' : 'var(--border-subtle)'}`,
+                      borderRadius: '10px',
+                      padding: '12px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{s.matchNumber}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                          <Flag code={s.homeTeam.code} size={20} />
+                          <p style={{ fontWeight: 600, fontSize: '12px', margin: 0 }}>{s.homeTeam.name}</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-deep)', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{s.homeScore}</span>
+                          <span style={{ color: 'var(--fifa-gold)', fontSize: '12px' }}>-</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{s.awayScore}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 600, fontSize: '12px', margin: 0 }}>{s.awayTeam.name}</p>
+                          <Flag code={s.awayTeam.code} size={20} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => handleAcceptSuggestion(s)}
+                          disabled={isAccepting || isAccepted}
+                          style={{
+                            fontSize: '12px',
+                            padding: '6px 14px',
+                            borderRadius: '8px',
+                            fontWeight: 600,
+                            border: 'none',
+                            cursor: 'pointer',
+                            background: isAccepted ? 'var(--fifa-green)' : 'var(--fifa-green)',
+                            color: 'white',
+                            opacity: isAccepting ? 0.5 : 1,
+                          }}
+                        >
+                          {isAccepting ? '...' : isAccepted ? '✓ Aplicado' : '✓ Aceptar resultado'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {/* TAB: ELIMINATORIAS */}
