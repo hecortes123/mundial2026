@@ -1,7 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
-// Mapeo de códigos TLA de football-data.org a nuestros códigos FIFA
 const TLA_TO_FIFA: Record<string, string> = {
   'MEX': 'MEX', 'RSA': 'RSA', 'KOR': 'KOR', 'CZE': 'CZE',
   'CAN': 'CAN', 'BIH': 'BIH', 'QAT': 'QAT', 'SUI': 'SUI',
@@ -17,31 +16,58 @@ const TLA_TO_FIFA: Record<string, string> = {
   'ENG': 'ENG', 'CRO': 'CRO', 'GHA': 'GHA', 'PAN': 'PAN',
 }
 
-export async function GET() {
+async function sendTelegram(message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) return
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    })
+  } catch (error) {
+    console.error('Error enviando Telegram:', error)
+  }
+}
+
+export async function GET(request: Request) {
+  // Permitir acceso con token de cron (para cron-job.org)
+  const { searchParams } = new URL(request.url)
+  const cronToken = searchParams.get('cronToken')
+  const isCron = cronToken === process.env.CRON_SECRET
+
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  // Si no es un cron, validar admin
+  if (!isCron) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
 
-  if (!profile?.is_admin) {
-    return NextResponse.json({ error: 'Acceso restringido' }, { status: 403 })
+    if (!profile?.is_admin) {
+      return NextResponse.json({ error: 'Acceso restringido' }, { status: 403 })
+    }
   }
 
   try {
-    // Consultar partidos finalizados de football-data.org
     const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED', {
       headers: {
         'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY!,
       },
-      // Cache de 5 min
       next: { revalidate: 300 },
     })
 
@@ -51,7 +77,6 @@ export async function GET() {
 
     const apiData = await res.json()
 
-    // Consultar nuestros partidos pendientes
     const { data: pendingMatches } = await supabase
       .from('matches')
       .select(`
@@ -64,18 +89,14 @@ export async function GET() {
       `)
       .eq('status', 'pendiente')
 
-    // Cruzar datos
     const suggestions: any[] = []
 
     for (const apiMatch of apiData.matches) {
       const homeFifa = TLA_TO_FIFA[apiMatch.homeTeam.tla]
       const awayFifa = TLA_TO_FIFA[apiMatch.awayTeam.tla]
-
       if (!homeFifa || !awayFifa) continue
 
-      // Buscar match en nuestra BD por equipos y fecha cercana (mismo día UTC)
       const apiDate = apiMatch.utcDate.split('T')[0]
-
       const ourMatch = pendingMatches?.find((m: any) => {
         const ourDate = new Date(m.match_date).toISOString().split('T')[0]
         return m.home_team?.code === homeFifa
@@ -95,6 +116,22 @@ export async function GET() {
           apiMatchId: apiMatch.id,
         })
       }
+    }
+
+    // Si es cron y hay sugerencias, notificar
+    if (isCron && suggestions.length > 0) {
+      const lines = suggestions.map(s =>
+        `⚽ <b>${(s.homeTeam as any)?.name}</b> ${s.homeScore} - ${s.awayScore} <b>${(s.awayTeam as any)?.name}</b>`
+      )
+      const message = [
+        '🏆 <b>Resultados pendientes por aprobar</b>',
+        '',
+        ...lines,
+        '',
+        `👉 https://mundial2026-ivory-eight.vercel.app/admin`,
+      ].join('\n')
+
+      await sendTelegram(message)
     }
 
     return NextResponse.json({
