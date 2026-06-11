@@ -111,13 +111,9 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
           padding: '16px',
         }}
       >
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr auto',
-          gap: '16px',
-          alignItems: 'center',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+        <div className="match-grid">
+          {/* Equipo local */}
+          <div className="match-team-home">
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                 {match.home_team?.name ?? match.home_team_placeholder}
@@ -129,7 +125,8 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             <Flag code={match.home_team?.code} size={28} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Marcador */}
+          <div className="match-score-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="number"
               min="0"
@@ -140,19 +137,8 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
                 ...prev,
                 [match.id]: { ...prev[match.id], home: e.target.value }
               }))}
-              style={{
-                width: '48px',
-                height: '40px',
-                textAlign: 'center',
-                background: 'var(--bg-deep)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                fontWeight: 700,
-                fontSize: '16px',
-                outline: 'none',
-                opacity: !isPending ? 0.4 : 1,
-              }}
+              className="match-score-input"
+              style={{ opacity: !isPending ? 0.4 : 1 }}
             />
             <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '18px' }}>-</span>
             <input
@@ -165,23 +151,13 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
                 ...prev,
                 [match.id]: { ...prev[match.id], away: e.target.value }
               }))}
-              style={{
-                width: '48px',
-                height: '40px',
-                textAlign: 'center',
-                background: 'var(--bg-deep)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                fontWeight: 700,
-                fontSize: '16px',
-                outline: 'none',
-                opacity: !isPending ? 0.4 : 1,
-              }}
+              className="match-score-input"
+              style={{ opacity: !isPending ? 0.4 : 1 }}
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Equipo visitante */}
+          <div className="match-team-away">
             <Flag code={match.away_team?.code} size={28} />
             <div>
               <p style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
@@ -193,7 +169,8 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             </div>
           </div>
 
-          <div style={{ minWidth: '110px', textAlign: 'right' }}>
+          {/* Botón */}
+          <div className="match-action">
             {isPending ? (
               <button
                 onClick={() => handleSave(match.id)}
@@ -226,7 +203,7 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
         </div>
 
         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.02em' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.02em', textAlign: 'center' }}>
             {new Date(match.match_date).toLocaleString('es-CO', {
               day: 'numeric',
               month: 'short',

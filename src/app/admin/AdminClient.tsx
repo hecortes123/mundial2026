@@ -33,12 +33,12 @@ interface Props {
 }
 
 const PHASES = [
-  { key: 'grupo', label: 'Fase de Grupos' },
-  { key: 'dieciseisavos', label: 'Dieciseisavos' },
+  { key: 'grupo', label: 'Grupos' },
+  { key: 'dieciseisavos', label: '16vos' },
   { key: 'octavos', label: 'Octavos' },
   { key: 'cuartos', label: 'Cuartos' },
-  { key: 'semifinal', label: 'Semifinales' },
-  { key: 'tercer_puesto', label: 'Tercer puesto' },
+  { key: 'semifinal', label: 'Semis' },
+  { key: 'tercer_puesto', label: '3er puesto' },
   { key: 'final', label: 'Final' },
 ]
 
@@ -84,21 +84,15 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
   const handleGenerate = async (matchId: number) => {
     setGenerating(prev => ({ ...prev, [matchId]: true }))
     setErrors(prev => ({ ...prev, [matchId]: '' }))
-
     try {
       const res = await fetch('/api/ai-prediction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matchId }),
       })
-
       const data = await res.json()
-
-      if (!res.ok) {
-        setErrors(prev => ({ ...prev, [matchId]: data.error }))
-      } else {
-        setGenerated(prev => ({ ...prev, [matchId]: new Date().toISOString() }))
-      }
+      if (!res.ok) setErrors(prev => ({ ...prev, [matchId]: data.error }))
+      else setGenerated(prev => ({ ...prev, [matchId]: new Date().toISOString() }))
     } catch {
       setErrors(prev => ({ ...prev, [matchId]: 'Error de conexión' }))
     } finally {
@@ -120,10 +114,8 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
   const handleSaveResult = async (matchId: number) => {
     const score = resultScores[matchId]
     if (score.home === '' || score.away === '') return
-
     setSavingResult(matchId)
     setResultErrors(prev => ({ ...prev, [matchId]: '' }))
-
     try {
       const res = await fetch('/api/update-result', {
         method: 'POST',
@@ -134,12 +126,9 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           awayScore: parseInt(score.away),
         }),
       })
-
       const data = await res.json()
-
-      if (!res.ok) {
-        setResultErrors(prev => ({ ...prev, [matchId]: data.error }))
-      } else {
+      if (!res.ok) setResultErrors(prev => ({ ...prev, [matchId]: data.error }))
+      else {
         setSavedResult(prev => ({ ...prev, [matchId]: true }))
         setTimeout(() => setSavedResult(prev => ({ ...prev, [matchId]: false })), 2000)
       }
@@ -153,24 +142,18 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
   const handleAssignTeam = async (matchId: number, side: 'home' | 'away', teamId: number | null) => {
     setSavingAssign(matchId)
     setAssignErrors(prev => ({ ...prev, [matchId]: '' }))
-
     try {
       const body: any = { matchId }
       if (side === 'home') body.homeTeamId = teamId
       if (side === 'away') body.awayTeamId = teamId
-
       const res = await fetch('/api/assign-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-
       const data = await res.json()
-      if (!res.ok) {
-        setAssignErrors(prev => ({ ...prev, [matchId]: data.error }))
-      } else {
-        window.location.reload()
-      }
+      if (!res.ok) setAssignErrors(prev => ({ ...prev, [matchId]: data.error }))
+      else window.location.reload()
     } catch {
       setAssignErrors(prev => ({ ...prev, [matchId]: 'Error de conexión' }))
     } finally {
@@ -178,15 +161,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
     }
   }
 
-  const ELIM_PHASES = [
-    { key: 'dieciseisavos', label: 'Dieciseisavos' },
-    { key: 'octavos', label: 'Octavos' },
-    { key: 'cuartos', label: 'Cuartos' },
-    { key: 'semifinal', label: 'Semifinales' },
-    { key: 'tercer_puesto', label: 'Tercer puesto' },
-    { key: 'final', label: 'Final' },
-  ]
-
+  const ELIM_PHASES = PHASES.filter(p => p.key !== 'grupo')
   const eliminatoriaMatches = matches.filter(m => m.phase === eliminatoriaPhase)
   const filteredMatches = matches.filter(m => m.phase === activePhase)
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
@@ -195,93 +170,93 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
     : filteredMatches
   const pendingInView = groupMatches.filter(m => !generated[m.id])
 
-  const tabStyle = (active: boolean) => ({
-    padding: '10px 18px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    background: active ? 'var(--text-primary)' : 'var(--bg-surface)',
-    color: active ? 'var(--bg-deep)' : 'var(--text-tertiary)',
-    border: '1px solid var(--border-subtle)',
-    transition: 'all 0.15s',
-  })
-
-  const phaseTabStyle = (active: boolean) => ({
-    padding: '8px 16px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: 500,
-    whiteSpace: 'nowrap' as const,
-    background: active ? 'var(--fifa-blue)' : 'var(--bg-surface)',
-    color: active ? 'white' : 'var(--text-tertiary)',
-    border: '1px solid var(--border-subtle)',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  })
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={username} isAdmin={true} />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
           Panel de Administración
         </h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
-          Gestión de pronósticos IA, resultados y asignación de eliminatorias
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 20px' }}>
+          Pronósticos IA, resultados y eliminatorias
         </p>
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--text-primary)' }}>
-            <p style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.03em' }}>
-              {matches.length}
-            </p>
-            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Total partidos</p>
+        {/* Stats */}
+        <div className="admin-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '10px', padding: '12px', borderLeft: '3px solid var(--text-primary)' }}>
+            <p style={{ fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.03em' }}>{matches.length}</p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '2px 0 0', fontSize: '9px' }}>Partidos</p>
           </div>
-          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-green)' }}>
-            <p style={{ fontSize: '22px', fontWeight: 700, color: 'var(--fifa-green)', margin: 0, letterSpacing: '-0.03em' }}>
-              {Object.keys(generated).length}
-            </p>
-            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Pronósticos IA</p>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '10px', padding: '12px', borderLeft: '3px solid var(--fifa-green)' }}>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fifa-green)', margin: 0, letterSpacing: '-0.03em' }}>{Object.keys(generated).length}</p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '2px 0 0', fontSize: '9px' }}>IA</p>
           </div>
-          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-gold)' }}>
-            <p style={{ fontSize: '22px', fontWeight: 700, color: 'var(--fifa-gold)', margin: 0, letterSpacing: '-0.03em' }}>
-              {matches.filter(m => m.status === 'finalizado').length}
-            </p>
-            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Finalizados</p>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '10px', padding: '12px', borderLeft: '3px solid var(--fifa-gold)' }}>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fifa-gold)', margin: 0, letterSpacing: '-0.03em' }}>{matches.filter(m => m.status === 'finalizado').length}</p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '2px 0 0', fontSize: '9px' }}>Finalizados</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+        {/* Tabs principales */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
           {TABS.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={tabStyle(activeTab === tab)}>
-              {tab === 'pronósticos' ? '🤖 Pronósticos IA' : tab === 'resultados' ? '⚽ Resultados' : '🏆 Eliminatorias'}
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                background: activeTab === tab ? 'var(--text-primary)' : 'var(--bg-surface)',
+                color: activeTab === tab ? 'var(--bg-deep)' : 'var(--text-tertiary)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              {tab === 'pronósticos' ? '🤖 IA' : tab === 'resultados' ? '⚽ Resultados' : '🏆 Llaves'}
             </button>
           ))}
         </div>
 
+        {/* Tabs de fase */}
         {activeTab !== 'eliminatorias' && (
           <>
             <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '12px', paddingBottom: '4px' }}>
               {PHASES.map(phase => (
-                <button key={phase.key} onClick={() => setActivePhase(phase.key)} style={phaseTabStyle(activePhase === phase.key)}>
+                <button
+                  key={phase.key}
+                  onClick={() => setActivePhase(phase.key)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    background: activePhase === phase.key ? 'var(--fifa-blue)' : 'var(--bg-surface)',
+                    color: activePhase === phase.key ? 'white' : 'var(--text-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    cursor: 'pointer',
+                  }}
+                >
                   {phase.label}
                 </button>
               ))}
             </div>
 
             {activePhase === 'grupo' && (
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {groups.map(g => (
                   <button
                     key={g}
                     onClick={() => setActiveGroup(g)}
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '8px',
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: 700,
                       background: activeGroup === g ? 'var(--fifa-gold)' : 'var(--bg-surface)',
                       color: activeGroup === g ? 'var(--bg-deep)' : 'var(--text-tertiary)',
@@ -297,21 +272,24 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </>
         )}
 
+        {/* TAB: PRONÓSTICOS IA */}
         {activeTab === 'pronósticos' && (
           <>
             {pendingInView.length > 0 && (
               <div style={{
-                marginBottom: '16px',
+                marginBottom: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '12px',
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                padding: '16px',
+                borderRadius: '10px',
+                padding: '12px',
+                flexWrap: 'wrap',
               }}>
-                <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pendingInView.length}</span> pronósticos pendientes
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pendingInView.length}</span> pendientes
                 </p>
                 <button
                   onClick={() => handleBatchGenerate(pendingInView.map(m => m.id))}
@@ -319,9 +297,9 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                   style={{
                     background: 'var(--fifa-blue)',
                     color: 'white',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 600,
-                    padding: '8px 16px',
+                    padding: '6px 12px',
                     borderRadius: '8px',
                     border: 'none',
                     cursor: 'pointer',
@@ -342,40 +320,41 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                   <div key={match.id} style={{
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-subtle)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    borderRadius: '10px',
+                    padding: '12px',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '32px' }}>#{match.match_number}</span>
-                      <Flag code={match.home_team?.code} size={22} />
-                      <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, minWidth: '120px' }}>
-                        {match.home_team?.name ?? match.home_team_placeholder}
-                      </p>
-                      <span style={{ color: 'var(--fifa-gold)', fontSize: '12px', fontWeight: 700 }}>VS</span>
-                      <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, minWidth: '120px' }}>
-                        {match.away_team?.name ?? match.away_team_placeholder}
-                      </p>
-                      <Flag code={match.away_team?.code} size={22} />
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, marginLeft: 'auto' }}>
-                        {formatDate(match.match_date)} · {match.city}
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{match.match_number}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                        <Flag code={match.home_team?.code} size={20} />
+                        <p style={{ fontWeight: 600, fontSize: '12px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {match.home_team?.name ?? match.home_team_placeholder}
+                        </p>
+                      </div>
+                      <span style={{ color: 'var(--fifa-gold)', fontSize: '11px', fontWeight: 700 }}>VS</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: '12px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {match.away_team?.name ?? match.away_team_placeholder}
+                        </p>
+                        <Flag code={match.away_team?.code} size={20} />
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
-                      {hasAi && (
-                        <span style={{ fontSize: '11px', color: 'var(--fifa-green)' }}>
-                          ✓ {new Date(generated[match.id]).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'America/Bogota' })}
-                        </span>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
+                          {formatDate(match.match_date)} · {match.city}
+                        </p>
+                        {hasAi && (
+                          <span style={{ fontSize: '10px', color: 'var(--fifa-green)' }}>✓ Generado</span>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleGenerate(match.id)}
                         disabled={isGenerating || batchLoading}
                         style={{
-                          fontSize: '12px',
-                          padding: '8px 14px',
+                          fontSize: '11px',
+                          padding: '6px 12px',
                           borderRadius: '8px',
                           fontWeight: 600,
                           border: 'none',
@@ -383,9 +362,10 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                           background: hasAi ? 'var(--bg-elevated)' : 'var(--fifa-blue)',
                           color: 'white',
                           opacity: (isGenerating || batchLoading) ? 0.5 : 1,
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {isGenerating ? '...' : hasAi ? '🔄 Actualizar' : '🤖 Generar'}
+                        {isGenerating ? '...' : hasAi ? '🔄' : '🤖 Generar'}
                       </button>
                     </div>
                   </div>
@@ -395,6 +375,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </>
         )}
 
+        {/* TAB: RESULTADOS */}
         {activeTab === 'resultados' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {groupMatches.map(match => {
@@ -404,103 +385,68 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
               const isFinished = match.status === 'finalizado'
 
               return (
-                <div key={match.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '32px 1fr auto 1fr auto',
-                    gap: '12px',
-                    alignItems: 'center',
-                  }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>#{match.match_number}</span>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
-                      <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, textAlign: 'right' }}>
+                <div key={match.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{match.match_number}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                      <Flag code={match.home_team?.code} size={20} />
+                      <p style={{ fontWeight: 600, fontSize: '12px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {match.home_team?.name ?? match.home_team_placeholder}
                       </p>
-                      <Flag code={match.home_team?.code} size={24} />
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={resultScores[match.id]?.home ?? ''}
-                        onChange={e => setResultScores(prev => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], home: e.target.value }
-                        }))}
-                        style={{
-                          width: '44px',
-                          height: '36px',
-                          textAlign: 'center',
-                          background: 'var(--bg-deep)',
-                          border: '1px solid var(--border-default)',
-                          borderRadius: '8px',
-                          color: 'var(--text-primary)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          outline: 'none',
-                        }}
-                      />
-                      <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '16px' }}>-</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={resultScores[match.id]?.away ?? ''}
-                        onChange={e => setResultScores(prev => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], away: e.target.value }
-                        }))}
-                        style={{
-                          width: '44px',
-                          height: '36px',
-                          textAlign: 'center',
-                          background: 'var(--bg-deep)',
-                          border: '1px solid var(--border-default)',
-                          borderRadius: '8px',
-                          color: 'var(--text-primary)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <Flag code={match.away_team?.code} size={24} />
-                      <p style={{ fontWeight: 600, fontSize: '13px', margin: 0 }}>
+                    <span style={{ color: 'var(--fifa-gold)', fontSize: '11px', fontWeight: 700 }}>VS</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '12px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {match.away_team?.name ?? match.away_team_placeholder}
                       </p>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {isFinished && <span style={{ fontSize: '11px', color: 'var(--fifa-green)' }}>✓</span>}
-                      <button
-                        onClick={() => handleSaveResult(match.id)}
-                        disabled={isSaving}
-                        style={{
-                          fontSize: '12px',
-                          padding: '8px 14px',
-                          borderRadius: '8px',
-                          fontWeight: 600,
-                          border: 'none',
-                          cursor: 'pointer',
-                          background: isSaved ? 'var(--fifa-green)' : isFinished ? 'var(--bg-elevated)' : 'var(--fifa-green)',
-                          color: 'white',
-                          opacity: isSaving ? 0.5 : 1,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {isSaving ? '...' : isSaved ? '✓ Guardado' : isFinished ? 'Actualizar' : 'Guardar'}
-                      </button>
+                      <Flag code={match.away_team?.code} size={20} />
                     </div>
                   </div>
 
-                  {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', marginTop: '8px' }}>{error}</p>}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={resultScores[match.id]?.home ?? ''}
+                      onChange={e => setResultScores(prev => ({ ...prev, [match.id]: { ...prev[match.id], home: e.target.value } }))}
+                      className="match-score-input"
+                      style={{ width: '50px', height: '36px' }}
+                    />
+                    <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '16px' }}>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={resultScores[match.id]?.away ?? ''}
+                      onChange={e => setResultScores(prev => ({ ...prev, [match.id]: { ...prev[match.id], away: e.target.value } }))}
+                      className="match-score-input"
+                      style={{ width: '50px', height: '36px' }}
+                    />
+                    <button
+                      onClick={() => handleSaveResult(match.id)}
+                      disabled={isSaving}
+                      style={{
+                        fontSize: '11px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: isSaved ? 'var(--fifa-green)' : isFinished ? 'var(--bg-elevated)' : 'var(--fifa-green)',
+                        color: 'white',
+                        opacity: isSaving ? 0.5 : 1,
+                        whiteSpace: 'nowrap',
+                        marginLeft: '8px',
+                      }}
+                    >
+                      {isSaving ? '...' : isSaved ? '✓' : isFinished ? 'Actualizar' : 'Guardar'}
+                    </button>
+                  </div>
 
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+                  {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', margin: '0 0 6px', textAlign: 'center' }}>{error}</p>}
+
+                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
                     {formatDate(match.match_date)} · {match.city}
                   </p>
                 </div>
@@ -509,17 +455,18 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </div>
         )}
 
+        {/* TAB: ELIMINATORIAS */}
         {activeTab === 'eliminatorias' && (
           <>
-            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
               {ELIM_PHASES.map(phase => (
                 <button
                   key={phase.key}
                   onClick={() => setEliminatoriaPhase(phase.key)}
                   style={{
-                    padding: '8px 16px',
+                    padding: '6px 12px',
                     borderRadius: '8px',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 500,
                     whiteSpace: 'nowrap',
                     background: eliminatoriaPhase === phase.key ? 'var(--fifa-gold)' : 'var(--bg-surface)',
@@ -536,12 +483,12 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
             <div style={{
               background: 'rgba(212, 175, 55, 0.08)',
               border: '1px solid rgba(212, 175, 55, 0.2)',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              marginBottom: '16px',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              marginBottom: '14px',
             }}>
-              <p style={{ fontSize: '12px', color: 'var(--fifa-gold)', margin: 0 }}>
-                💡 Asigna los equipos clasificados a cada cruce. Los placeholders (1A, W73) son referencias del calendario oficial.
+              <p style={{ fontSize: '11px', color: 'var(--fifa-gold)', margin: 0 }}>
+                💡 Asigna los equipos clasificados. Placeholders como 1A, W73 son del calendario oficial.
               </p>
             </div>
 
@@ -551,72 +498,69 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                 const error = assignErrors[match.id]
 
                 return (
-                  <div key={match.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '32px' }}>#{match.match_number}</span>
+                  <div key={match.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{match.match_number}</span>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                        {formatDate(match.match_date)} · {match.city}
+                      </p>
+                    </div>
 
-                      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '12px', alignItems: 'center' }}>
-                        <div>
-                          <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px', letterSpacing: '1px' }}>
-                            LOCAL · <span style={{ color: 'var(--fifa-gold)' }}>{match.home_team_placeholder ?? '-'}</span>
-                          </p>
-                          <select
-                            value={match.home_team?.code ? teams.find(t => t.code === match.home_team?.code)?.id ?? '' : ''}
-                            onChange={e => handleAssignTeam(match.id, 'home', e.target.value ? parseInt(e.target.value) : null)}
-                            disabled={isSaving}
-                            style={{
-                              width: '100%',
-                              background: 'var(--bg-deep)',
-                              border: '1px solid var(--border-default)',
-                              borderRadius: '8px',
-                              padding: '8px 12px',
-                              fontSize: '13px',
-                              color: 'var(--text-primary)',
-                              outline: 'none',
-                            }}
-                          >
-                            <option value="">— Sin asignar —</option>
-                            {teams.map(t => (
-                              <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
-                            ))}
-                          </select>
-                        </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px', letterSpacing: '1px' }}>
+                          LOCAL · <span style={{ color: 'var(--fifa-gold)' }}>{match.home_team_placeholder ?? '-'}</span>
+                        </p>
+                        <select
+                          value={match.home_team?.code ? teams.find(t => t.code === match.home_team?.code)?.id ?? '' : ''}
+                          onChange={e => handleAssignTeam(match.id, 'home', e.target.value ? parseInt(e.target.value) : null)}
+                          disabled={isSaving}
+                          style={{
+                            width: '100%',
+                            background: 'var(--bg-deep)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                            fontSize: '12px',
+                            color: 'var(--text-primary)',
+                            outline: 'none',
+                          }}
+                        >
+                          <option value="">— Sin asignar —</option>
+                          {teams.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
+                          ))}
+                        </select>
+                      </div>
 
-                        <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '14px', marginTop: '20px' }}>VS</span>
-
-                        <div>
-                          <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px', letterSpacing: '1px' }}>
-                            VISITANTE · <span style={{ color: 'var(--fifa-gold)' }}>{match.away_team_placeholder ?? '-'}</span>
-                          </p>
-                          <select
-                            value={match.away_team?.code ? teams.find(t => t.code === match.away_team?.code)?.id ?? '' : ''}
-                            onChange={e => handleAssignTeam(match.id, 'away', e.target.value ? parseInt(e.target.value) : null)}
-                            disabled={isSaving}
-                            style={{
-                              width: '100%',
-                              background: 'var(--bg-deep)',
-                              border: '1px solid var(--border-default)',
-                              borderRadius: '8px',
-                              padding: '8px 12px',
-                              fontSize: '13px',
-                              color: 'var(--text-primary)',
-                              outline: 'none',
-                            }}
-                          >
-                            <option value="">— Sin asignar —</option>
-                            {teams.map(t => (
-                              <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
-                            ))}
-                          </select>
-                        </div>
+                      <div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px', letterSpacing: '1px' }}>
+                          VISITANTE · <span style={{ color: 'var(--fifa-gold)' }}>{match.away_team_placeholder ?? '-'}</span>
+                        </p>
+                        <select
+                          value={match.away_team?.code ? teams.find(t => t.code === match.away_team?.code)?.id ?? '' : ''}
+                          onChange={e => handleAssignTeam(match.id, 'away', e.target.value ? parseInt(e.target.value) : null)}
+                          disabled={isSaving}
+                          style={{
+                            width: '100%',
+                            background: 'var(--bg-deep)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                            fontSize: '12px',
+                            color: 'var(--text-primary)',
+                            outline: 'none',
+                          }}
+                        >
+                          <option value="">— Sin asignar —</option>
+                          {teams.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
                     {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', marginTop: '8px' }}>{error}</p>}
-
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                      {formatDate(match.match_date)} · {match.city}
-                    </p>
                   </div>
                 )
               })}
