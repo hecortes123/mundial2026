@@ -45,6 +45,15 @@ const PHASES = [
 const TABS = ['pronósticos', 'resultados', 'eliminatorias'] as const
 type Tab = typeof TABS[number]
 
+const formatDate = (date: string) =>
+  new Date(date).toLocaleString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Bogota',
+  })
+
 export default function AdminClient({ matches, aiMap, username, teams }: Props) {
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [generated, setGenerated] = useState<Record<number, string>>(aiMap)
@@ -223,7 +232,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           Gestión de pronósticos IA, resultados y asignación de eliminatorias
         </p>
 
-        {/* Stats globales */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--text-primary)' }}>
             <p style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.03em' }}>
@@ -245,7 +253,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </div>
         </div>
 
-        {/* Tabs principales */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
           {TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={tabStyle(activeTab === tab)}>
@@ -254,7 +261,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           ))}
         </div>
 
-        {/* Tabs de fase (excepto eliminatorias) */}
         {activeTab !== 'eliminatorias' && (
           <>
             <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '12px', paddingBottom: '4px' }}>
@@ -291,7 +297,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </>
         )}
 
-        {/* TAB: PRONÓSTICOS IA */}
         {activeTab === 'pronósticos' && (
           <>
             {pendingInView.length > 0 && (
@@ -332,7 +337,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
               {groupMatches.map(match => {
                 const hasAi = !!generated[match.id]
                 const isGenerating = generating[match.id]
-                const error = errors[match.id]
 
                 return (
                   <div key={match.id} style={{
@@ -356,14 +360,14 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                       </p>
                       <Flag code={match.away_team?.code} size={22} />
                       <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, marginLeft: 'auto' }}>
-                        {new Date(match.match_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })} · {match.city}
+                        {formatDate(match.match_date)} · {match.city}
                       </p>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
                       {hasAi && (
                         <span style={{ fontSize: '11px', color: 'var(--fifa-green)' }}>
-                          ✓ {new Date(generated[match.id]).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                          ✓ {new Date(generated[match.id]).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'America/Bogota' })}
                         </span>
                       )}
                       <button
@@ -391,7 +395,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </>
         )}
 
-        {/* TAB: RESULTADOS */}
         {activeTab === 'resultados' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {groupMatches.map(match => {
@@ -498,7 +501,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                   {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', marginTop: '8px' }}>{error}</p>}
 
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
-                    {new Date(match.match_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.city}
+                    {formatDate(match.match_date)} · {match.city}
                   </p>
                 </div>
               )
@@ -506,7 +509,6 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
           </div>
         )}
 
-        {/* TAB: ELIMINATORIAS */}
         {activeTab === 'eliminatorias' && (
           <>
             <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '4px' }}>
@@ -613,7 +615,7 @@ export default function AdminClient({ matches, aiMap, username, teams }: Props) 
                     {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', marginTop: '8px' }}>{error}</p>}
 
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                      {new Date(match.match_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.city}
+                      {formatDate(match.match_date)} · {match.city}
                     </p>
                   </div>
                 )

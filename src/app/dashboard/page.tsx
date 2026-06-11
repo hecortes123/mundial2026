@@ -48,7 +48,6 @@ export default async function DashboardPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
 
-        {/* Stats grid */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-green)' }}>
             <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--fifa-green)', margin: 0, letterSpacing: '-0.03em' }}>
@@ -70,7 +69,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Accesos rápidos */}
         <div className="grid grid-cols-2 gap-3 mb-8">
           <Link
             href="/pronosticos"
@@ -104,7 +102,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Próximos partidos */}
         <h2 className="fifa-label" style={{ color: 'var(--text-primary)', margin: '0 0 12px', fontSize: '12px' }}>
           Próximos partidos
         </h2>
@@ -118,12 +115,11 @@ export default async function DashboardPage() {
                 padding: '16px',
                 border: '1px solid var(--border-subtle)',
                 display: 'grid',
-                gridTemplateColumns: '1fr 80px 1fr 100px',
+                gridTemplateColumns: '1fr 80px 1fr 120px',
                 gap: '16px',
                 alignItems: 'center',
               }}
             >
-              {/* Equipo local */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>
@@ -136,7 +132,6 @@ export default async function DashboardPage() {
                 <Flag code={match.home_team?.code} size={28} />
               </div>
 
-              {/* VS */}
               <div style={{ textAlign: 'center' }}>
                 <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.02em' }}>VS</span>
                 <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '2px 0 0', letterSpacing: '1px' }}>
@@ -144,7 +139,6 @@ export default async function DashboardPage() {
                 </p>
               </div>
 
-              {/* Equipo visitante */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Flag code={match.away_team?.code} size={28} />
                 <div>
@@ -157,12 +151,14 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Fecha */}
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
-                  {new Date(match.match_date).toLocaleDateString('es-CO', {
+                  {new Date(match.match_date).toLocaleString('es-CO', {
                     day: 'numeric',
-                    month: 'short'
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Bogota',
                   })}
                 </p>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>

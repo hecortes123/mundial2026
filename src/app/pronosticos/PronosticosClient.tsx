@@ -117,7 +117,6 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
           gap: '16px',
           alignItems: 'center',
         }}>
-          {/* Equipo local */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
@@ -130,7 +129,6 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             <Flag code={match.home_team?.code} size={28} />
           </div>
 
-          {/* Marcador */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="number"
@@ -183,7 +181,6 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             />
           </div>
 
-          {/* Equipo visitante */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Flag code={match.away_team?.code} size={28} />
             <div>
@@ -196,7 +193,6 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             </div>
           </div>
 
-          {/* Botón */}
           <div style={{ minWidth: '110px', textAlign: 'right' }}>
             {isPending ? (
               <button
@@ -231,11 +227,12 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
 
         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.02em' }}>
-            {new Date(match.match_date).toLocaleDateString('es-CO', {
+            {new Date(match.match_date).toLocaleString('es-CO', {
               day: 'numeric',
               month: 'short',
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
+              timeZone: 'America/Bogota',
             })} · {match.city}
           </p>
         </div>
