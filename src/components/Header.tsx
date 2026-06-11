@@ -28,17 +28,40 @@ export default function Header({ username, isAdmin }: Props) {
 
   return (
     <>
-      <header className="border-b border-gray-800 bg-gray-900">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">⚽ Polla Mundial 2026</h1>
+      <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="48" fill="var(--bg-deep)" stroke="var(--fifa-gold)" strokeWidth="2"/>
+              <text x="50" y="60" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="38" fontWeight="900" fill="var(--fifa-gold)" letterSpacing="-2" fontStyle="italic">26</text>
+              <text x="50" y="80" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="10" fontWeight="800" fill="var(--fifa-gold)" letterSpacing="3">FIFA</text>
+            </svg>
+            <div>
+              <p style={{ color: 'var(--fifa-green)', fontSize: '10px', letterSpacing: '0.2em', fontWeight: 600, margin: 0 }}>
+                COPA MUNDIAL FIFA
+              </p>
+              <p style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, margin: 0, letterSpacing: '-0.02em' }}>
+                Polla 2026
+              </p>
+            </div>
+          </Link>
+
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">
-              Hola, <span className="text-white font-medium">{username}</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
+              Hola, <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{username}</span>
             </span>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="text-sm text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50"
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-strong)',
+                color: 'var(--text-tertiary)',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
             >
               {loggingOut ? '...' : 'Cerrar sesión'}
             </button>
@@ -46,21 +69,27 @@ export default function Header({ username, isAdmin }: Props) {
         </div>
       </header>
 
-      <nav className="border-b border-gray-800 bg-gray-900">
+      <nav style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="max-w-6xl mx-auto px-4 flex gap-1">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                pathname === item.href
-                  ? 'text-white border-blue-500'
-                  : 'text-gray-400 hover:text-white border-transparent'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map(item => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  padding: '14px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: isActive ? 'var(--fifa-green)' : 'var(--text-tertiary)',
+                  borderBottom: `2px solid ${isActive ? 'var(--fifa-green)' : 'transparent'}`,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
         </div>
       </nav>
     </>

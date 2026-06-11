@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import Flag from '@/components/Flag'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -42,78 +43,131 @@ export default async function DashboardPage() {
     .single()
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={profile?.username ?? ''} isAdmin={profile?.is_admin} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-blue-400">{profile?.total_points ?? 0}</p>
-            <p className="text-gray-400 text-sm mt-1">Puntos</p>
+      <main className="max-w-6xl mx-auto px-4 py-8">
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-green)' }}>
+            <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--fifa-green)', margin: 0, letterSpacing: '-0.03em' }}>
+              {profile?.total_points ?? 0}
+            </p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Puntos</p>
           </div>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-green-400">{predictions?.length ?? 0}</p>
-            <p className="text-gray-400 text-sm mt-1">Pronósticos</p>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-gold)' }}>
+            <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--fifa-gold)', margin: 0, letterSpacing: '-0.03em' }}>
+              {predictions?.length ?? 0}
+            </p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Pronósticos</p>
           </div>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-yellow-400">
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-blue)' }}>
+            <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.03em' }}>
               {ranking?.rank ? `#${ranking.rank}` : '—'}
             </p>
-            <p className="text-gray-400 text-sm mt-1">Posición</p>
+            <p className="fifa-label" style={{ color: 'var(--text-tertiary)', margin: '4px 0 0' }}>Posición</p>
           </div>
         </div>
 
         {/* Accesos rápidos */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-8">
           <Link
             href="/pronosticos"
-            className="bg-blue-600 hover:bg-blue-700 transition-colors rounded-xl p-6 text-center"
+            style={{
+              background: 'var(--fifa-green)',
+              borderRadius: '12px',
+              padding: '20px',
+              textDecoration: 'none',
+              color: 'white',
+              transition: 'all 0.2s',
+            }}
           >
-            <p className="text-2xl mb-2">🎯</p>
-            <p className="font-bold">Hacer pronósticos</p>
-            <p className="text-blue-200 text-sm mt-1">72 partidos de fase de grupos</p>
+            <p style={{ fontSize: '24px', margin: '0 0 8px' }}>🎯</p>
+            <p style={{ fontWeight: 600, margin: 0, fontSize: '15px' }}>Hacer pronósticos</p>
+            <p style={{ fontSize: '12px', margin: '4px 0 0', opacity: 0.85 }}>72 partidos de fase de grupos</p>
           </Link>
           <Link
             href="/ranking"
-            className="bg-gray-900 hover:bg-gray-800 border border-gray-800 transition-colors rounded-xl p-6 text-center"
+            style={{
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              padding: '20px',
+              textDecoration: 'none',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+            }}
           >
-            <p className="text-2xl mb-2">🏆</p>
-            <p className="font-bold">Ver ranking</p>
-            <p className="text-gray-400 text-sm mt-1">¿En qué posición estás?</p>
+            <p style={{ fontSize: '24px', margin: '0 0 8px' }}>🏆</p>
+            <p style={{ fontWeight: 600, margin: 0, fontSize: '15px' }}>Ver ranking</p>
+            <p style={{ fontSize: '12px', margin: '4px 0 0', color: 'var(--text-tertiary)' }}>¿En qué posición estás?</p>
           </Link>
         </div>
 
         {/* Próximos partidos */}
-        <h2 className="text-lg font-semibold mb-4">Próximos partidos</h2>
-        <div className="space-y-3">
+        <h2 className="fifa-label" style={{ color: 'var(--text-primary)', margin: '0 0 12px', fontSize: '12px' }}>
+          Próximos partidos
+        </h2>
+        <div className="space-y-2">
           {matches?.map(match => (
             <div
               key={match.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between"
+              style={{
+                background: 'var(--bg-surface)',
+                borderRadius: '12px',
+                padding: '16px',
+                border: '1px solid var(--border-subtle)',
+                display: 'grid',
+                gridTemplateColumns: '1fr 80px 1fr 100px',
+                gap: '16px',
+                alignItems: 'center',
+              }}
             >
-              <div className="flex items-center gap-4 flex-1">
-                <div className="text-right flex-1">
-                  <p className="font-semibold">{match.home_team?.name ?? match.home_team_placeholder}</p>
-                  <p className="text-xs text-gray-500">Local</p>
+              {/* Equipo local */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>
+                    {match.home_team?.name ?? match.home_team_placeholder}
+                  </p>
+                  <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '2px 0 0', fontSize: '10px' }}>
+                    {match.home_team?.code ?? ''}
+                  </p>
                 </div>
-                <div className="text-center px-3">
-                  <span className="text-gray-500 font-bold">VS</span>
-                  <p className="text-xs text-gray-600 mt-1">Grupo {match.group_letter}</p>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold">{match.away_team?.name ?? match.away_team_placeholder}</p>
-                  <p className="text-xs text-gray-500">Visitante</p>
+                <Flag code={match.home_team?.code} size={28} />
+              </div>
+
+              {/* VS */}
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.02em' }}>VS</span>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '2px 0 0', letterSpacing: '1px' }}>
+                  GRUPO {match.group_letter}
+                </p>
+              </div>
+
+              {/* Equipo visitante */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Flag code={match.away_team?.code} size={28} />
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>
+                    {match.away_team?.name ?? match.away_team_placeholder}
+                  </p>
+                  <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '2px 0 0', fontSize: '10px' }}>
+                    {match.away_team?.code ?? ''}
+                  </p>
                 </div>
               </div>
-              <div className="text-right ml-4">
-                <p className="text-xs text-gray-500">
+
+              {/* Fecha */}
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
                   {new Date(match.match_date).toLocaleDateString('es-CO', {
                     day: 'numeric',
                     month: 'short'
                   })}
                 </p>
-                <p className="text-xs text-gray-600">{match.city}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                  {match.city}
+                </p>
               </div>
             </div>
           ))}

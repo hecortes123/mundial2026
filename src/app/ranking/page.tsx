@@ -1,16 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import Header from '@/components/Header'
 
 export default async function RankingPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/auth/login')
-  }
+  if (!user) redirect('/auth/login')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -24,27 +20,84 @@ export default async function RankingPage() {
     .order('total_points', { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Header */}
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={profile?.username ?? ''} isAdmin={profile?.is_admin} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-2">Ranking</h2>
-        <p className="text-gray-400 text-sm mb-8">
-          Actualizado en tiempo real según los resultados oficiales.
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          Ranking
+        </h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
+          Actualizado en tiempo real según los resultados oficiales
         </p>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          {/* Tabla header */}
-          <div className="grid grid-cols-12 px-4 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
-            <div className="col-span-1">#</div>
-            <div className="col-span-5">Usuario</div>
-            <div className="col-span-2 text-center">Pts</div>
-            <div className="col-span-2 text-center">Exactos</div>
-            <div className="col-span-2 text-center">Correctos</div>
+        {/* Podio top 3 */}
+        {ranking && ranking.length >= 3 && (
+          <div className="grid grid-cols-3 gap-3 mb-8" style={{ alignItems: 'end' }}>
+            {/* Segundo */}
+            <div style={{
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center',
+              borderTop: '3px solid #C0C0C0',
+            }}>
+              <p style={{ fontSize: '22px', margin: '0 0 4px' }}>🥈</p>
+              <p style={{ fontSize: '13px', fontWeight: 600, margin: '4px 0 2px', color: 'var(--text-primary)' }}>
+                {ranking[1].username}
+              </p>
+              <p style={{ fontSize: '18px', color: '#C0C0C0', margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {ranking[1].total_points} pts
+              </p>
+            </div>
+
+            {/* Primero */}
+            <div style={{
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              padding: '20px 16px',
+              textAlign: 'center',
+              borderTop: '4px solid var(--fifa-gold)',
+              transform: 'translateY(-12px)',
+            }}>
+              <p style={{ fontSize: '28px', margin: '0 0 4px' }}>🏆</p>
+              <p style={{ fontSize: '14px', fontWeight: 600, margin: '4px 0 2px', color: 'var(--text-primary)' }}>
+                {ranking[0].username}
+              </p>
+              <p style={{ fontSize: '22px', color: 'var(--fifa-gold)', margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {ranking[0].total_points} pts
+              </p>
+            </div>
+
+            {/* Tercero */}
+            <div style={{
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center',
+              borderTop: '3px solid #CD7F32',
+            }}>
+              <p style={{ fontSize: '22px', margin: '0 0 4px' }}>🥉</p>
+              <p style={{ fontSize: '13px', fontWeight: 600, margin: '4px 0 2px', color: 'var(--text-primary)' }}>
+                {ranking[2].username}
+              </p>
+              <p style={{ fontSize: '18px', color: '#CD7F32', margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {ranking[2].total_points} pts
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Tabla completa */}
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div className="grid grid-cols-12 px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="col-span-1 fifa-label" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>#</div>
+            <div className="col-span-5 fifa-label" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Usuario</div>
+            <div className="col-span-2 text-center fifa-label" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Pts</div>
+            <div className="col-span-2 text-center fifa-label" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Exactos</div>
+            <div className="col-span-2 text-center fifa-label" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Correctos</div>
           </div>
 
-          {/* Filas */}
           {ranking?.map((entry, index) => {
             const isCurrentUser = entry.id === user.id
             const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null
@@ -52,48 +105,49 @@ export default async function RankingPage() {
             return (
               <div
                 key={entry.id}
-                className={`grid grid-cols-12 px-4 py-4 border-b border-gray-800 last:border-0 items-center ${
-                  isCurrentUser ? 'bg-blue-600/10 border-l-2 border-l-blue-500' : ''
-                }`}
+                className="grid grid-cols-12 px-4 py-4 items-center"
+                style={{
+                  borderBottom: '1px solid var(--border-subtle)',
+                  background: isCurrentUser ? 'rgba(0, 168, 89, 0.06)' : 'transparent',
+                  borderLeft: isCurrentUser ? '3px solid var(--fifa-green)' : '3px solid transparent',
+                }}
               >
-                <div className="col-span-1 text-gray-400 font-bold">
+                <div className="col-span-1" style={{ color: 'var(--text-tertiary)', fontWeight: 600, fontSize: '14px' }}>
                   {medal ?? index + 1}
                 </div>
                 <div className="col-span-5">
-                  <p className={`font-semibold ${isCurrentUser ? 'text-blue-400' : 'text-white'}`}>
+                  <p style={{ fontWeight: 600, fontSize: '14px', margin: 0, color: isCurrentUser ? 'var(--fifa-green)' : 'var(--text-primary)' }}>
                     {entry.username}
                     {isCurrentUser && (
-                      <span className="ml-2 text-xs text-blue-500 font-normal">Tú</span>
+                      <span style={{ marginLeft: '8px', fontSize: '10px', color: 'var(--fifa-green)', fontWeight: 400 }}>· Tú</span>
                     )}
                   </p>
-                  {entry.display_name !== entry.username && (
-                    <p className="text-xs text-gray-500">{entry.display_name}</p>
-                  )}
                 </div>
                 <div className="col-span-2 text-center">
-                  <span className="text-lg font-bold text-white">{entry.total_points}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                    {entry.total_points}
+                  </span>
                 </div>
                 <div className="col-span-2 text-center">
-                  <span className="text-green-400 font-semibold">{entry.exact_scores}</span>
+                  <span style={{ color: 'var(--fifa-green)', fontWeight: 600, fontSize: '14px' }}>{entry.exact_scores}</span>
                 </div>
                 <div className="col-span-2 text-center">
-                  <span className="text-yellow-400 font-semibold">{entry.correct_results}</span>
+                  <span style={{ color: 'var(--fifa-gold)', fontWeight: 600, fontSize: '14px' }}>{entry.correct_results}</span>
                 </div>
               </div>
             )
           })}
 
           {(!ranking || ranking.length === 0) && (
-            <div className="px-4 py-12 text-center text-gray-500">
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
               Aún no hay participantes registrados
             </div>
           )}
         </div>
 
-        {/* Leyenda */}
-        <div className="mt-6 flex gap-6 text-xs text-gray-500">
-          <span><span className="text-green-400 font-bold">Exactos</span> — Marcador exacto (3 pts)</span>
-          <span><span className="text-yellow-400 font-bold">Correctos</span> — Resultado correcto (1 pt)</span>
+        <div className="mt-6 flex gap-6" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          <span><span style={{ color: 'var(--fifa-green)', fontWeight: 600 }}>Exactos</span> · Marcador exacto (3 pts)</span>
+          <span><span style={{ color: 'var(--fifa-gold)', fontWeight: 600 }}>Correctos</span> · Resultado correcto (1 pt)</span>
         </div>
       </main>
     </div>

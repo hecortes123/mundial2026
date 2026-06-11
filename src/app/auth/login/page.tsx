@@ -30,53 +30,125 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-800">
-        <h1 className="text-2xl font-bold text-white mb-2">Iniciar sesión</h1>
-        <p className="text-gray-400 mb-6">Polla Mundial 2026</p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg-deep)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px',
+    }}>
+      <div style={{
+        background: 'var(--bg-surface)',
+        borderRadius: '16px',
+        padding: '32px',
+        width: '100%',
+        maxWidth: '420px',
+        border: '1px solid var(--border-subtle)',
+      }}>
+        {/* Emblema */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <svg width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="48" fill="var(--bg-deep)" stroke="var(--fifa-gold)" strokeWidth="2"/>
+            <text x="50" y="60" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="38" fontWeight="900" fill="var(--fifa-gold)" letterSpacing="-2" fontStyle="italic">26</text>
+            <text x="50" y="80" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="10" fontWeight="800" fill="var(--fifa-gold)" letterSpacing="3">FIFA</text>
+          </svg>
+          <p className="fifa-label" style={{ color: 'var(--fifa-green)', margin: '12px 0 4px' }}>
+            COPA MUNDIAL FIFA
+          </p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
+            Polla 2026
+          </h1>
+        </div>
+
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', textAlign: 'center', margin: '0 0 24px' }}>
+          Iniciar sesión
+        </p>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg p-3 mb-4 text-sm">
+          <div style={{
+            background: 'rgba(204, 34, 41, 0.1)',
+            border: '1px solid rgba(204, 34, 41, 0.3)',
+            color: 'var(--fifa-red)',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '13px',
+          }}>
             {error}
           </div>
         )}
 
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Correo</label>
+            <label className="fifa-label" style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '6px' }}>
+              Correo
+            </label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
               placeholder="tu@correo.com"
+              style={{
+                width: '100%',
+                background: 'var(--bg-deep)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                outline: 'none',
+              }}
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Contraseña</label>
+            <label className="fifa-label" style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '6px' }}>
+              Contraseña
+            </label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
               placeholder="••••••••"
+              style={{
+                width: '100%',
+                background: 'var(--bg-deep)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                outline: 'none',
+              }}
             />
           </div>
 
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors"
+            style={{
+              width: '100%',
+              background: 'var(--fifa-green)',
+              color: 'white',
+              fontWeight: 600,
+              fontSize: '14px',
+              padding: '12px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: loading ? 0.5 : 1,
+              marginTop: '8px',
+            }}
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </div>
 
-        <p className="text-gray-500 text-sm mt-6 text-center">
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', textAlign: 'center', margin: '24px 0 0' }}>
           ¿No tienes cuenta?{' '}
-          <Link href="/auth/registro" className="text-blue-400 hover:text-blue-300">
+          <Link href="/auth/registro" style={{ color: 'var(--fifa-green)', textDecoration: 'none', fontWeight: 600 }}>
             Regístrate
           </Link>
         </p>

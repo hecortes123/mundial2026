@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import AiPrediction from './AiPrediction'
 import Header from '@/components/Header'
+import Flag from '@/components/Flag'
 
 interface Team {
   code: string
@@ -94,31 +95,199 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
     }
   }
 
+  const renderMatchCard = (match: Match) => {
+    const isPending = match.status === 'pendiente'
+    const hasPred = !!predMap[match.id]
+    const isSaving = saving === match.id
+    const isSaved = saved[match.id]
+
+    return (
+      <div
+        key={match.id}
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '12px',
+          padding: '16px',
+        }}
+      >
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr auto',
+          gap: '16px',
+          alignItems: 'center',
+        }}>
+          {/* Equipo local */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
+                {match.home_team?.name ?? match.home_team_placeholder}
+              </p>
+              <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '2px 0 0', fontSize: '10px' }}>
+                {match.home_team?.code ?? ''}
+              </p>
+            </div>
+            <Flag code={match.home_team?.code} size={28} />
+          </div>
+
+          {/* Marcador */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="number"
+              min="0"
+              max="20"
+              disabled={!isPending}
+              value={scores[match.id]?.home ?? ''}
+              onChange={e => setScores(prev => ({
+                ...prev,
+                [match.id]: { ...prev[match.id], home: e.target.value }
+              }))}
+              style={{
+                width: '48px',
+                height: '40px',
+                textAlign: 'center',
+                background: 'var(--bg-deep)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: '16px',
+                outline: 'none',
+                opacity: !isPending ? 0.4 : 1,
+              }}
+            />
+            <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '18px' }}>-</span>
+            <input
+              type="number"
+              min="0"
+              max="20"
+              disabled={!isPending}
+              value={scores[match.id]?.away ?? ''}
+              onChange={e => setScores(prev => ({
+                ...prev,
+                [match.id]: { ...prev[match.id], away: e.target.value }
+              }))}
+              style={{
+                width: '48px',
+                height: '40px',
+                textAlign: 'center',
+                background: 'var(--bg-deep)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: '16px',
+                outline: 'none',
+                opacity: !isPending ? 0.4 : 1,
+              }}
+            />
+          </div>
+
+          {/* Equipo visitante */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Flag code={match.away_team?.code} size={28} />
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
+                {match.away_team?.name ?? match.away_team_placeholder}
+              </p>
+              <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '2px 0 0', fontSize: '10px' }}>
+                {match.away_team?.code ?? ''}
+              </p>
+            </div>
+          </div>
+
+          {/* Botón */}
+          <div style={{ minWidth: '110px', textAlign: 'right' }}>
+            {isPending ? (
+              <button
+                onClick={() => handleSave(match.id)}
+                disabled={isSaving}
+                style={{
+                  fontSize: '12px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: isSaved
+                    ? 'var(--fifa-green)'
+                    : hasPred
+                    ? 'var(--bg-elevated)'
+                    : 'var(--fifa-blue)',
+                  color: 'white',
+                  opacity: isSaving ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {isSaving ? '...' : isSaved ? '✓ Guardado' : hasPred ? 'Actualizar' : 'Guardar'}
+              </button>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                {match.status === 'finalizado' ? '⏱ Finalizado' : '🔒 Cerrado'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.02em' }}>
+            {new Date(match.match_date).toLocaleDateString('es-CO', {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit'
+            })} · {match.city}
+          </p>
+        </div>
+
+        <AiPrediction
+          matchId={match.id}
+          homeTeam={match.home_team?.name ?? match.home_team_placeholder ?? ''}
+          awayTeam={match.away_team?.name ?? match.away_team_placeholder ?? ''}
+          hasExisting={!!aiPredictions[match.id]}
+          existing={aiPredictions[match.id]}
+          isAdmin={isAdmin}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={username} isAdmin={isAdmin} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-2">Mis pronósticos</h2>
-        <p className="text-gray-400 text-sm mb-8">
-          Ingresa el marcador que predices para cada partido. 3 pts por marcador exacto, 1 pt por resultado correcto.
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          Mis pronósticos
+        </h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
+          3 pts por marcador exacto · 1 pt por resultado correcto
         </p>
 
-        {/* Tabs de fase */}
         <div className="flex gap-1 overflow-x-auto mb-6 pb-1">
-          {PHASES.map(phase => (
-            <button
-              key={phase.key}
-              onClick={() => setActivePhase(phase.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                activePhase === phase.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
-              }`}
-            >
-              {phase.label}
-            </button>
-          ))}
+          {PHASES.map(phase => {
+            const isActive = activePhase === phase.key
+            return (
+              <button
+                key={phase.key}
+                onClick={() => setActivePhase(phase.key)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  background: isActive ? 'var(--fifa-green)' : 'var(--bg-surface)',
+                  color: isActive ? 'white' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {phase.label}
+              </button>
+            )
+          })}
         </div>
 
         {activePhase === 'grupo' ? (
@@ -126,125 +295,28 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
             const groupMatches = matches.filter(m => m.phase === 'grupo' && m.group_letter === group)
             if (!groupMatches.length) return null
 
-          return (
-            <div key={group} className="mb-8">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-                Grupo {group}
-              </h3>
-              <div className="space-y-2">
-                {groupMatches.map(match => {
-                  const isPending = match.status === 'pendiente'
-                  const hasPred = !!predMap[match.id]
-                  const isSaving = saving === match.id
-                  const isSaved = saved[match.id]
-
-                  return (
-                    <div
-                      key={match.id}
-                      className="bg-gray-900 border border-gray-800 rounded-xl p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Equipo local */}
-                        <div className="flex-1 text-right">
-                          <p className="font-semibold text-sm">
-                            {match.home_team?.name ?? match.home_team_placeholder}
-                          </p>
-                        </div>
-
-                        {/* Marcador */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            disabled={!isPending}
-                            value={scores[match.id]?.home ?? ''}
-                            onChange={e => setScores(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], home: e.target.value }
-                            }))}
-                            className="w-12 h-10 text-center bg-gray-800 border border-gray-700 rounded-lg text-white font-bold focus:outline-none focus:border-blue-500 disabled:opacity-40"
-                          />
-                          <span className="text-gray-600 font-bold">-</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            disabled={!isPending}
-                            value={scores[match.id]?.away ?? ''}
-                            onChange={e => setScores(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], away: e.target.value }
-                            }))}
-                            className="w-12 h-10 text-center bg-gray-800 border border-gray-700 rounded-lg text-white font-bold focus:outline-none focus:border-blue-500 disabled:opacity-40"
-                          />
-                        </div>
-
-                        {/* Equipo visitante */}
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">
-                            {match.away_team?.name ?? match.away_team_placeholder}
-                          </p>
-                        </div>
-
-                        {/* Botón guardar */}
-                        {isPending ? (
-                          <button
-                            onClick={() => handleSave(match.id)}
-                            disabled={isSaving}
-                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                              isSaved
-                                ? 'bg-green-600 text-white'
-                                : hasPred
-                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                            }`}
-                          >
-                            {isSaving ? '...' : isSaved ? '✓ Guardado' : hasPred ? 'Actualizar' : 'Guardar'}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-600 italic">
-                            {match.status === 'finalizado' ? '⏱ Finalizado' : '🔒 Cerrado'}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 flex justify-center">
-                        <p className="text-xs text-gray-600">
-                          {new Date(match.match_date).toLocaleDateString('es-CO', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} — {match.city}
-                        </p>
-                      </div>
-                      <AiPrediction
-                        matchId={match.id}
-                        homeTeam={match.home_team?.name ?? match.home_team_placeholder ?? ''}
-                        awayTeam={match.away_team?.name ?? match.away_team_placeholder ?? ''}
-                        hasExisting={!!aiPredictions[match.id]}
-                        existing={aiPredictions[match.id]}
-                        isAdmin={isAdmin}
-                      />
-                    </div>
-                  )
-                })}
+            return (
+              <div key={group} className="mb-6">
+                <h3 className="fifa-label" style={{ color: 'var(--fifa-gold)', margin: '24px 0 12px', fontSize: '11px' }}>
+                  Grupo {group}
+                </h3>
+                <div className="space-y-2">
+                  {groupMatches.map(renderMatchCard)}
+                </div>
               </div>
-            </div>
-          )
-        })
+            )
+          })
         ) : (
           (() => {
             const phaseMatches = matches.filter(m => m.phase === activePhase && m.home_team && m.away_team)
-            
+
             if (!phaseMatches.length) {
               return (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                  <p className="text-gray-400">
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '32px', textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-tertiary)', margin: 0 }}>
                     Aún no hay equipos asignados a esta fase.
                   </p>
-                  <p className="text-gray-600 text-sm mt-2">
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '8px 0 0' }}>
                     Los pronósticos se habilitarán cuando termine la fase anterior.
                   </p>
                 </div>
@@ -253,101 +325,7 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
 
             return (
               <div className="space-y-2">
-                {phaseMatches.map(match => {
-                  const isPending = match.status === 'pendiente'
-                  const hasPred = !!predMap[match.id]
-                  const isSaving = saving === match.id
-                  const isSaved = saved[match.id]
-
-                  return (
-                    <div
-                      key={match.id}
-                      className="bg-gray-900 border border-gray-800 rounded-xl p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 text-right">
-                          <p className="font-semibold text-sm">
-                            {match.home_team?.name}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            disabled={!isPending}
-                            value={scores[match.id]?.home ?? ''}
-                            onChange={e => setScores(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], home: e.target.value }
-                            }))}
-                            className="w-12 h-10 text-center bg-gray-800 border border-gray-700 rounded-lg text-white font-bold focus:outline-none focus:border-blue-500 disabled:opacity-40"
-                          />
-                          <span className="text-gray-600 font-bold">-</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            disabled={!isPending}
-                            value={scores[match.id]?.away ?? ''}
-                            onChange={e => setScores(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], away: e.target.value }
-                            }))}
-                            className="w-12 h-10 text-center bg-gray-800 border border-gray-700 rounded-lg text-white font-bold focus:outline-none focus:border-blue-500 disabled:opacity-40"
-                          />
-                        </div>
-
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">
-                            {match.away_team?.name}
-                          </p>
-                        </div>
-
-                        {isPending ? (
-                          <button
-                            onClick={() => handleSave(match.id)}
-                            disabled={isSaving}
-                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                              isSaved
-                                ? 'bg-green-600 text-white'
-                                : hasPred
-                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                            }`}
-                          >
-                            {isSaving ? '...' : isSaved ? '✓ Guardado' : hasPred ? 'Actualizar' : 'Guardar'}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-600 italic">
-                            {match.status === 'finalizado' ? '⏱ Finalizado' : '🔒 Cerrado'}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 flex justify-center">
-                        <p className="text-xs text-gray-600">
-                          {new Date(match.match_date).toLocaleDateString('es-CO', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} — {match.city}
-                        </p>
-                      </div>
-
-                      <AiPrediction
-                        matchId={match.id}
-                        homeTeam={match.home_team?.name ?? ''}
-                        awayTeam={match.away_team?.name ?? ''}
-                        hasExisting={!!aiPredictions[match.id]}
-                        existing={aiPredictions[match.id]}
-                        isAdmin={isAdmin}
-                      />
-                    </div>
-                  )
-                })}
+                {phaseMatches.map(renderMatchCard)}
               </div>
             )
           })()

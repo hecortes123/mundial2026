@@ -62,93 +62,160 @@ export default function AiPrediction({ matchId, homeTeam, awayTeam, existing, ha
     }
   }
 
-  return (
-    <div className="mt-3 border-t border-gray-800 pt-3">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => {
-            if (prediction || hasExisting) {
-              setOpen(!open)
-            }
-          }}
-          disabled={loading || (!hasExisting && !isAdmin)}
-          className={`flex items-center gap-2 text-xs transition-colors disabled:opacity-30 ${
-            hasExisting || prediction
-              ? 'text-purple-400 hover:text-purple-300 cursor-pointer'
-              : 'text-gray-600 cursor-not-allowed'
-          }`}
-        >
-          <span>🤖</span>
-          {loading ? (
-          <span className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-            Buscando noticias y analizando...
-          </span>
-        ) : prediction || hasExisting ? (
-          open ? 'Ocultar análisis IA' : 'Ver análisis IA'
-        ) : (
-          'Análisis IA no disponible aún'
-        )}
-        </button>        
-      </div>
+  const isClickable = hasExisting || !!prediction
 
-      {error && (
-        <p className="text-xs text-red-400 mt-2">{error}</p>
-      )}
+  return (
+    <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
+      <button
+        onClick={() => {
+          if (isClickable) {
+            setOpen(!open)
+          }
+        }}
+        disabled={loading || !isClickable}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          fontWeight: 600,
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          color: isClickable ? 'var(--fifa-blue)' : 'var(--text-muted)',
+          cursor: isClickable ? 'pointer' : 'not-allowed',
+          letterSpacing: '0.02em',
+        }}
+      >
+        {loading ? (
+          <>
+            <span style={{
+              display: 'inline-block',
+              width: '12px',
+              height: '12px',
+              border: '2px solid var(--fifa-blue)',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.6s linear infinite',
+            }} />
+            Analizando con IA...
+          </>
+        ) : (
+          <>
+            <span>🤖</span>
+            {isClickable
+              ? open ? 'Ocultar análisis IA' : 'Ver análisis IA'
+              : 'Análisis IA no disponible aún'}
+          </>
+        )}
+      </button>
+
+      {error && <p style={{ fontSize: '11px', color: 'var(--fifa-red)', marginTop: '8px' }}>{error}</p>}
 
       {prediction && open && (
-        <div className="mt-3 bg-gray-800/50 rounded-lg p-4 space-y-4">
-
+        <div style={{
+          marginTop: '14px',
+          background: 'var(--bg-deep)',
+          borderRadius: '12px',
+          padding: '16px',
+          border: '1px solid var(--border-subtle)',
+        }}>
           {/* Probabilidades */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Probabilidades</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-gray-800 rounded-lg p-2">
-                <p className="text-lg font-bold text-green-400">{prediction.home_win_pct}%</p>
-                <p className="text-xs text-gray-500 truncate">{homeTeam}</p>
+          <div style={{ marginBottom: '16px' }}>
+            <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '0 0 8px', fontSize: '10px' }}>
+              Probabilidades
+            </p>
+
+            {/* Barra de probabilidades */}
+            <div style={{ display: 'flex', gap: '3px', marginBottom: '8px' }}>
+              <div style={{
+                flex: prediction.home_win_pct,
+                background: 'var(--fifa-green)',
+                height: '8px',
+                borderRadius: '4px',
+              }} />
+              <div style={{
+                flex: prediction.draw_pct,
+                background: 'var(--fifa-gold)',
+                height: '8px',
+                borderRadius: '4px',
+              }} />
+              <div style={{
+                flex: prediction.away_win_pct,
+                background: 'var(--fifa-blue)',
+                height: '8px',
+                borderRadius: '4px',
+              }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fifa-green)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {prediction.home_win_pct}%
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{homeTeam}</p>
               </div>
-              <div className="bg-gray-800 rounded-lg p-2">
-                <p className="text-lg font-bold text-yellow-400">{prediction.draw_pct}%</p>
-                <p className="text-xs text-gray-500">Empate</p>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fifa-gold)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {prediction.draw_pct}%
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>Empate</p>
               </div>
-              <div className="bg-gray-800 rounded-lg p-2">
-                <p className="text-lg font-bold text-blue-400">{prediction.away_win_pct}%</p>
-                <p className="text-xs text-gray-500 truncate">{awayTeam}</p>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fifa-blue)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {prediction.away_win_pct}%
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{awayTeam}</p>
               </div>
             </div>
           </div>
 
           {/* Goles esperados */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Goles esperados</p>
-            <div className="flex items-center justify-center gap-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{prediction.home_expected_goals}</p>
-                <p className="text-xs text-gray-500 truncate">{homeTeam}</p>
+          <div style={{ marginBottom: '16px' }}>
+            <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '0 0 8px', fontSize: '10px' }}>
+              Goles esperados
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {prediction.home_expected_goals}
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{homeTeam}</p>
               </div>
-              <span className="text-gray-600 font-bold">—</span>
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{prediction.away_expected_goals}</p>
-                <p className="text-xs text-gray-500 truncate">{awayTeam}</p>
+              <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '18px' }}>—</span>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {prediction.away_expected_goals}
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{awayTeam}</p>
               </div>
             </div>
           </div>
 
           {/* Forma reciente */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Forma reciente</p>
-            <div className="grid grid-cols-2 gap-3">
+          <div style={{ marginBottom: '16px' }}>
+            <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '0 0 8px', fontSize: '10px' }}>
+              Forma reciente
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <p className="text-xs text-gray-400 mb-1 truncate">{homeTeam}</p>
-                <div className="flex gap-1">
+                <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 4px' }}>{homeTeam}</p>
+                <div style={{ display: 'flex', gap: '4px' }}>
                   {prediction.recent_form.home.split('').map((r, i) => (
                     <span
                       key={i}
-                      className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center ${
-                        r === 'W' ? 'bg-green-600 text-white' :
-                        r === 'D' ? 'bg-yellow-600 text-white' :
-                        'bg-red-600 text-white'
-                      }`}
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        background: r === 'W' ? 'var(--fifa-green)' : r === 'D' ? 'var(--fifa-gold)' : 'var(--fifa-red)',
+                      }}
                     >
                       {r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}
                     </span>
@@ -156,16 +223,23 @@ export default function AiPrediction({ matchId, homeTeam, awayTeam, existing, ha
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-400 mb-1 truncate">{awayTeam}</p>
-                <div className="flex gap-1">
+                <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 4px' }}>{awayTeam}</p>
+                <div style={{ display: 'flex', gap: '4px' }}>
                   {prediction.recent_form.away.split('').map((r, i) => (
                     <span
                       key={i}
-                      className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center ${
-                        r === 'W' ? 'bg-green-600 text-white' :
-                        r === 'D' ? 'bg-yellow-600 text-white' :
-                        'bg-red-600 text-white'
-                      }`}
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        background: r === 'W' ? 'var(--fifa-green)' : r === 'D' ? 'var(--fifa-gold)' : 'var(--fifa-red)',
+                      }}
                     >
                       {r === 'W' ? 'G' : r === 'D' ? 'E' : 'P'}
                     </span>
@@ -176,16 +250,18 @@ export default function AiPrediction({ matchId, homeTeam, awayTeam, existing, ha
           </div>
 
           {/* Jugadores clave */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Jugadores clave</p>
-            <div className="space-y-2">
+          <div style={{ marginBottom: '16px' }}>
+            <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '0 0 8px', fontSize: '10px' }}>
+              Jugadores clave
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {prediction.key_players?.map((kp, i) => (
-                <div key={i} className="flex gap-2">
-                  <span className="text-purple-400 text-xs mt-0.5">⭐</span>
+                <div key={i} style={{ display: 'flex', gap: '8px' }}>
+                  <span style={{ color: 'var(--fifa-gold)', fontSize: '12px', marginTop: '2px' }}>⭐</span>
                   <div>
-                    <span className="text-xs font-semibold text-white">{kp.player}</span>
-                    <span className="text-xs text-gray-500 ml-1">({kp.team})</span>
-                    <p className="text-xs text-gray-400">{kp.reason}</p>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{kp.player}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>({kp.team})</span>
+                    <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '2px 0 0', lineHeight: 1.5 }}>{kp.reason}</p>
                   </div>
                 </div>
               ))}
@@ -194,17 +270,28 @@ export default function AiPrediction({ matchId, homeTeam, awayTeam, existing, ha
 
           {/* Análisis */}
           <div>
-            <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Análisis</p>
-            <p className="text-xs text-gray-300 leading-relaxed">{prediction.analysis_text}</p>
+            <p className="fifa-label" style={{ color: 'var(--text-muted)', margin: '0 0 8px', fontSize: '10px' }}>
+              Análisis
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+              {prediction.analysis_text}
+            </p>
           </div>
 
           {prediction.generated_at && (
-            <p className="text-xs text-gray-600 text-right">
+            <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right', margin: '12px 0 0' }}>
               Actualizado: {new Date(prediction.generated_at).toLocaleString('es-CO')}
             </p>
           )}
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
