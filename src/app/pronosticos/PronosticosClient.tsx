@@ -96,7 +96,8 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
   }
 
   const renderMatchCard = (match: Match) => {
-    const isPending = match.status === 'pendiente'
+    const matchStarted = new Date(match.match_date) <= new Date()
+    const isPending = match.status === 'pendiente' && !matchStarted
     const hasPred = !!predMap[match.id]
     const isSaving = saving === match.id
     const isSaved = saved[match.id]
@@ -196,7 +197,11 @@ export default function PronosticosClient({ matches, predictions, userId, isAdmi
               </button>
             ) : (
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                {match.status === 'finalizado' ? '⏱ Finalizado' : '🔒 Cerrado'}
+                {match.status === 'finalizado'
+                  ? '⏱ Finalizado'
+                  : matchStarted
+                  ? '⚽ Juego iniciado'
+                  : '🔒 Cerrado'}
               </span>
             )}
           </div>
