@@ -61,14 +61,28 @@ export async function GET(request: Request) {
   if (!apiData?.matches) return NextResponse.json({ error: 'Sin datos de la API' }, { status: 502 })
 
   // 2. Traer nuestros partidos
-  const { data: ourMatches } = await supabase
+  type TeamRef = { code: string; name: string } | null
+  type MatchRow = {
+    id: number
+    match_number: number
+    phase: string
+    match_date: string
+    home_team_placeholder: string | null
+    away_team_placeholder: string | null
+    home_team: TeamRef
+    away_team: TeamRef
+  }
+
+  const { data: ourMatchesRaw } = await supabase
     .from('matches')
     .select(`id, match_number, phase, match_date, home_team_placeholder, away_team_placeholder,
       home_team:teams!matches_home_team_id_fkey(code, name),
       away_team:teams!matches_away_team_id_fkey(code, name)`)
     .order('match_number', { ascending: true })
 
-  if (!ourMatches) return NextResponse.json({ error: 'Sin partidos en BD' }, { status: 500 })
+  if (!ourMatchesRaw) return NextResponse.json({ error: 'Sin partidos en BD' }, { status: 500 })
+
+  const ourMatches = ourMatchesRaw as unknown as MatchRow[]
 
   const changes: any[] = []
   const unmatched: any[] = []
