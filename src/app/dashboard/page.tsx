@@ -43,12 +43,70 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
+  // ¿Mostrar aviso de campeón? Solo si no ha elegido y el plazo sigue abierto
+  const { data: myChampion } = await supabase
+    .from('champion_predictions')
+    .select('team_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const { data: octavosStarted } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('phase', 'octavos')
+    .lte('match_date', new Date().toISOString())
+    .limit(1)
+
+  const championOpen = !octavosStarted || octavosStarted.length === 0
+  const showChampionBanner = championOpen && !myChampion
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
       <Header username={profile?.username ?? ''} isAdmin={profile?.is_admin} />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
 
+        {showChampionBanner && (
+          <Link
+            href="/campeon"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              background: 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.06))',
+              border: '1px solid rgba(212,175,55,0.35)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              marginBottom: '20px',
+              textDecoration: 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '22px' }}>🏆</span>
+              <div>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  ¡Aún no eliges tu campeón!
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                  Elige quién levanta la copa antes de que inicien los octavos (4 jul, 12:00).
+                </p>
+              </div>
+            </div>
+            <span style={{
+              background: 'var(--fifa-gold)',
+              color: 'var(--bg-deep)',
+              fontSize: '13px',
+              fontWeight: 700,
+              padding: '8px 14px',
+              borderRadius: '8px',
+              whiteSpace: 'nowrap',
+            }}>
+              Elegir →
+            </span>
+          </Link>
+        )}
+        
         {/* Stats */}
         <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
           <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', borderLeft: '3px solid var(--fifa-green)' }}>
