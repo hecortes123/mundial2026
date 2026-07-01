@@ -26,8 +26,9 @@ export default async function DashboardPage() {
       home_team:teams!matches_home_team_id_fkey(code, name),
       away_team:teams!matches_away_team_id_fkey(code, name)
     `)
-    .eq('phase', 'grupo')
     .eq('status', 'pendiente')
+    .not('home_team_id', 'is', null)
+    .not('away_team_id', 'is', null)
     .order('match_date', { ascending: true })
     .limit(5)
 
@@ -131,7 +132,7 @@ export default async function DashboardPage() {
                 <div style={{ textAlign: 'center' }}>
                   <span style={{ color: 'var(--fifa-gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.02em' }}>VS</span>
                   <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '2px 0 0', letterSpacing: '1px' }}>
-                    GRUPO {match.group_letter}
+                    {match.group_letter ? `GRUPO ${match.group_letter}` : match.phase.toUpperCase()}
                   </p>
                 </div>
 
