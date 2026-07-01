@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
+import Flag from '@/components/Flag'
 
 export default async function RankingPage() {
   const supabase = await createClient()
@@ -18,6 +19,19 @@ export default async function RankingPage() {
     .from('leaderboard')
     .select('*')
     .order('total_points', { ascending: false })
+
+  // Elección de campeón de cada usuario
+  const { data: champions } = await supabase
+    .from('champion_predictions')
+    .select(`
+      user_id,
+      team:teams(code, name)
+    `)
+
+  const championMap: Record<string, { code: string; name: string }> = {}
+  ;(champions ?? []).forEach((c: any) => {
+    if (c.team) championMap[c.user_id] = c.team
+  })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)' }}>
@@ -123,7 +137,12 @@ export default async function RankingPage() {
                 <div style={{ color: 'var(--text-tertiary)', fontWeight: 600, fontSize: '14px' }}>
                   {medal ?? index + 1}
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {championMap[entry.id] && (
+                    <span title={`Campeón: ${championMap[entry.id].name}`} style={{ flexShrink: 0, display: 'inline-flex' }}>
+                      <Flag code={championMap[entry.id].code} size={16} />
+                    </span>
+                  )}
                   <p style={{
                     fontWeight: 600,
                     fontSize: '13px',

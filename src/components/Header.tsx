@@ -23,6 +23,7 @@ export default function Header({ username, isAdmin }: Props) {
     { href: '/dashboard', label: 'Inicio' },
     { href: '/pronosticos', label: 'Pronósticos' },
     { href: '/grupos', label: 'Grupos' },
+    { href: '/campeon', label: 'Campeón' },
     { href: '/ranking', label: 'Ranking' },
     ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
