@@ -3,13 +3,18 @@ import { tavily } from '@tavily/core'
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const tavilyClient = tavily({ apiKey: process.env.TAVILY_API_KEY! })
 
-const tavilyClient = tavily({
-  apiKey: process.env.TAVILY_API_KEY!,
-})
+const KNOCKOUT_PHASES = ['dieciseisavos', 'octavos', 'cuartos', 'semifinal', 'tercer_puesto', 'final']
+const PHASE_LABEL: Record<string, string> = {
+  dieciseisavos: 'Dieciseisavos',
+  octavos: 'Octavos',
+  cuartos: 'Cuartos',
+  semifinal: 'Semifinal',
+  tercer_puesto: 'Tercer puesto',
+  final: 'Final',
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -30,7 +35,6 @@ export async function POST(request: NextRequest) {
   }
 
   const { matchId } = await request.json()
-
   if (!matchId) {
     return NextResponse.json({ error: 'matchId requerido' }, { status: 400 })
   }
@@ -53,17 +57,16 @@ export async function POST(request: NextRequest) {
   const awayTeam = match.away_team?.name ?? match.away_team_placeholder
   const homeCode = match.home_team?.code ?? ''
   const awayCode = match.away_team?.code ?? ''
+  const isKnockout = KNOCKOUT_PHASES.includes(match.phase)
 
   try {
-    // Paso 1 — Rendimiento REAL en el torneo (desde nuestra BD)
-    const { data: standings } = await supabase.from('group_standings').select('*')
-
+    // ---- Historial de partidos finalizados (filtrado por fase si es eliminatoria) ----
     let history: any[] = []
     if (match.home_team_id && match.away_team_id) {
-      const { data: h } = await supabase
+      let q = supabase
         .from('matches')
         .select(`
-          home_team_id, away_team_id, home_score, away_score, match_date,
+          phase, home_team_id, away_team_id, home_score, away_score, match_date,
           home_team:teams!matches_home_team_id_fkey(name),
           away_team:teams!matches_away_team_id_fkey(name)
         `)
@@ -71,94 +74,78 @@ export async function POST(request: NextRequest) {
         .or(
           `home_team_id.eq.${match.home_team_id},away_team_id.eq.${match.home_team_id},home_team_id.eq.${match.away_team_id},away_team_id.eq.${match.away_team_id}`
         )
+      if (isKnockout) q = q.in('phase', KNOCKOUT_PHASES)
+      const { data: h } = await q
       history = h ?? []
     }
 
-    const matchResults = (teamId: number) =>
+    const teamMatches = (teamId: number) =>
       history
         .filter((m: any) => m.home_team_id === teamId || m.away_team_id === teamId)
         .sort((a: any, b: any) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
-        .map((m: any) => {
-          const isHome = m.home_team_id === teamId
-          const gf = isHome ? m.home_score : m.away_score
-          const ga = isHome ? m.away_score : m.home_score
-          const opp = isHome ? m.away_team?.name : m.home_team?.name
-          const r = gf > ga ? 'victoria' : gf < ga ? 'derrota' : 'empate'
-          return `${r} ${gf}-${ga} vs ${opp}`
-        })
 
-    const describeCampaign = (teamId: number | null, teamName: string) => {
+    // ---- Descripción del recorrido en eliminatorias (con estadísticas) ----
+    const describeKnockoutRun = (teamId: number | null, teamName: string) => {
       if (!teamId) return `${teamName}: equipo aún por definir.`
-      const results = matchResults(teamId)
-      const s = (standings ?? []).find((x: any) => x.team_id === teamId)
-      if (!s) {
-        return results.length
-          ? `${teamName}: ${results.join('; ')}.`
-          : `${teamName}: sin datos de fase de grupos.`
-      }
-      const group = (standings ?? [])
-        .filter((x: any) => x.group_letter === s.group_letter)
-        .sort((a: any, b: any) =>
-          b.points - a.points || b.goal_difference - a.goal_difference || b.goals_for - a.goals_for
-        )
-      const pos = group.findIndex((x: any) => x.team_id === teamId) + 1
-      const posLabel =
-        pos === 1 ? '1º del grupo' : pos === 2 ? '2º del grupo' : 'entre los mejores terceros'
-      const resTxt = results.length ? ` Resultados en el torneo: ${results.join('; ')}.` : ''
-      return `${teamName} (Grupo ${s.group_letter}): clasificó como ${posLabel} con ${s.points} pts (${s.won}V ${s.drawn}E ${s.lost}D, ${s.goals_for} goles a favor / ${s.goals_against} en contra).${resTxt}`
+      const ms = teamMatches(teamId)
+      if (!ms.length) return `${teamName}: sin partidos de eliminatoria registrados todavía.`
+      let gf = 0, ga = 0, clean = 0
+      const lines = ms.map((m: any) => {
+        const isHome = m.home_team_id === teamId
+        const f = isHome ? m.home_score : m.away_score
+        const a = isHome ? m.away_score : m.home_score
+        const opp = isHome ? m.away_team?.name : m.home_team?.name
+        gf += f; ga += a; if (a === 0) clean++
+        const outcome =
+          f > a ? 'ganó' : f < a ? 'perdió' : 'empató y avanzó (prórroga/penales)'
+        return `${PHASE_LABEL[m.phase] ?? m.phase}: ${outcome} ${f}-${a} vs ${opp}`
+      })
+      return `${teamName} — Recorrido en eliminatorias: ${lines.join('; ')}. Totales: ${gf} goles a favor y ${ga} en contra en ${ms.length} partido(s), ${clean} valla(s) invicta(s).`
     }
 
-    const campaignHome = describeCampaign(match.home_team_id, homeTeam)
-    const campaignAway = describeCampaign(match.away_team_id, awayTeam)
+    // ---- Descripción por rendimiento de torneo (fases previas / grupos) ----
+    const describeGeneric = (teamId: number | null, teamName: string) => {
+      if (!teamId) return `${teamName}: equipo aún por definir.`
+      const ms = teamMatches(teamId)
+      if (!ms.length) return `${teamName}: sin datos de partidos previos.`
+      const lines = ms.map((m: any) => {
+        const isHome = m.home_team_id === teamId
+        const f = isHome ? m.home_score : m.away_score
+        const a = isHome ? m.away_score : m.home_score
+        const opp = isHome ? m.away_team?.name : m.home_team?.name
+        const r = f > a ? 'victoria' : f < a ? 'derrota' : 'empate'
+        return `${r} ${f}-${a} vs ${opp}`
+      })
+      return `${teamName}: ${lines.join('; ')}.`
+    }
 
-    // Paso 2 — Tavily: foco en rendimiento del torneo (sin inducir sanciones)
-    const [newsHome, newsAway] = await Promise.all([
-      tavilyClient.search(`${homeTeam} selección Mundial 2026 rendimiento fase de grupos noticias`, {
-        maxResults: 5,
-        searchDepth: 'basic',
-      }),
-      tavilyClient.search(`${awayTeam} selección Mundial 2026 rendimiento fase de grupos noticias`, {
-        maxResults: 5,
-        searchDepth: 'basic',
-      }),
-    ])
+    const perfHome = isKnockout ? describeKnockoutRun(match.home_team_id, homeTeam) : describeGeneric(match.home_team_id, homeTeam)
+    const perfAway = isKnockout ? describeKnockoutRun(match.away_team_id, awayTeam) : describeGeneric(match.away_team_id, awayTeam)
 
-    const contextHome = newsHome.results
-      .map(r => `- ${r.title}: ${r.content?.slice(0, 200)}`)
-      .join('\n')
+    // ---- Tavily: rendimiento + bajas (más búsquedas si es eliminatoria) ----
+    let perfCtxHome = '', perfCtxAway = '', injCtxHome = '', injCtxAway = ''
 
-    const contextAway = newsAway.results
-      .map(r => `- ${r.title}: ${r.content?.slice(0, 200)}`)
-      .join('\n')
+    const fmt = (res: any) =>
+      (res?.results ?? []).map((r: any) => `- ${r.title}: ${r.content?.slice(0, 200)}`).join('\n')
 
-    // Paso 3 — Claude analiza (sin web_search)
-    const prompt = `Eres un analista deportivo experto en fútbol. Analiza este partido del Mundial FIFA 2026 y genera un pronóstico basado SOBRE TODO en el rendimiento real de cada selección durante este torneo.
+    if (isKnockout) {
+      const [ph, pa, ih, ia] = await Promise.all([
+        tavilyClient.search(`${homeTeam} selección Mundial 2026 dieciseisavos octavos resultado rendimiento`, { maxResults: 5, searchDepth: 'basic' }),
+        tavilyClient.search(`${awayTeam} selección Mundial 2026 dieciseisavos octavos resultado rendimiento`, { maxResults: 5, searchDepth: 'basic' }),
+        tavilyClient.search(`${homeTeam} selección Mundial 2026 lesionados sancionados tarjeta roja baja`, { maxResults: 5, searchDepth: 'basic' }),
+        tavilyClient.search(`${awayTeam} selección Mundial 2026 lesionados sancionados tarjeta roja baja`, { maxResults: 5, searchDepth: 'basic' }),
+      ])
+      perfCtxHome = fmt(ph); perfCtxAway = fmt(pa); injCtxHome = fmt(ih); injCtxAway = fmt(ia)
+    } else {
+      const [ph, pa] = await Promise.all([
+        tavilyClient.search(`${homeTeam} selección Mundial 2026 rendimiento noticias`, { maxResults: 5, searchDepth: 'basic' }),
+        tavilyClient.search(`${awayTeam} selección Mundial 2026 rendimiento noticias`, { maxResults: 5, searchDepth: 'basic' }),
+      ])
+      perfCtxHome = fmt(ph); perfCtxAway = fmt(pa)
+    }
 
-PARTIDO: ${homeTeam} vs ${awayTeam}
-FASE: ${match.phase}
-FECHA: ${match.match_date}
-SEDE: ${match.city}
-
-RENDIMIENTO EN EL MUNDIAL (datos oficiales — esta es tu base principal de análisis):
-${campaignHome}
-${campaignAway}
-
-NOTICIAS RECIENTES (contexto complementario, puede estar incompleto o ser irrelevante):
-${homeTeam}:
-${contextHome}
-
-${awayTeam}:
-${contextAway}
-
-REGLAS ESTRICTAS (obligatorias):
-1. Centra el análisis en cómo se desempeñó cada equipo en el torneo y CÓMO CLASIFICÓ a esta ronda: posición en el grupo, puntos, goles a favor/en contra y resultados. Compara el nivel mostrado por ambos.
-2. NO inventes lesiones, sanciones ni bajas. Menciona una baja (por lesión o por tarjetas) ÚNICAMENTE si aparece de forma explícita en las noticias proporcionadas arriba. Si no hay información clara de bajas, NO las menciones ni asumas que algún jugador está ausente.
-3. Las 48 selecciones, incluida Irán, están participando con normalidad. Nunca afirmes que un equipo se retiró, fue excluido o no participa.
-4. "recent_form" debe reflejar los resultados reales recientes (incluida la fase de grupos de este Mundial).
-5. Los "key_players" deben ser jugadores que están disponibles y han participado en el torneo; no incluyas jugadores que las noticias indiquen como ausentes.
-
-Responde ÚNICAMENTE con este JSON, sin texto antes ni después, sin markdown:
-{
+    // ---- Prompt ----
+    const jsonSchema = `{
   "home_win_pct": número entre 0 y 100,
   "draw_pct": número entre 0 y 100,
   "away_win_pct": número entre 0 y 100,
@@ -168,18 +155,78 @@ Responde ÚNICAMENTE con este JSON, sin texto antes ni después, sin markdown:
     {"team": "${homeCode}", "player": "nombre", "reason": "por qué es clave"},
     {"team": "${awayCode}", "player": "nombre", "reason": "por qué es clave"}
   ],
-  "recent_form": {
-    "home": "WWDLL",
-    "away": "WDWWL"
-  },
-  "analysis_text": "Análisis de 3-4 oraciones centrado en el rendimiento de ambos en el torneo y cómo clasificaron"
-}
+  "recent_form": { "home": "WWDLL", "away": "WDWWL" },
+  "analysis_text": "texto del análisis"
+}`
+
+    const prompt = isKnockout
+      ? `Eres un analista táctico de fútbol de élite. Analiza este partido de ${PHASE_LABEL[match.phase] ?? match.phase} del Mundial FIFA 2026 y genera un pronóstico PROFUNDO basado casi exclusivamente en el rendimiento de cada selección en las rondas de eliminación ya disputadas (para cuartos: dieciseisavos y octavos). NO uses la fase de grupos como base.
+
+PARTIDO: ${homeTeam} vs ${awayTeam}
+FASE: ${PHASE_LABEL[match.phase] ?? match.phase}
+FECHA: ${match.match_date}
+SEDE: ${match.city}
+
+RECORRIDO EN ELIMINATORIAS (datos oficiales — BASE PRINCIPAL del análisis):
+${perfHome}
+${perfAway}
+
+NOTICIAS DE RENDIMIENTO (contexto complementario):
+${homeTeam}:
+${perfCtxHome}
+${awayTeam}:
+${perfCtxAway}
+
+NOTICIAS DE BAJAS / LESIONES / SANCIONES (contexto — puede venir vacío o irrelevante):
+${homeTeam}:
+${injCtxHome}
+${awayTeam}:
+${injCtxAway}
+
+INSTRUCCIONES (obligatorias):
+1. Fundamenta el análisis y el marcador esperado ANTE TODO en los datos de sus partidos de dieciseisavos y octavos: goles marcados y recibidos, contundencia ofensiva, solidez defensiva y CÓMO resolvieron cada eliminatoria (goleada, resultado ajustado, prórroga o penales).
+2. Usa esas estadísticas concretas para estimar el marcador más probable y JUSTIFICA los goles esperados citando esos datos.
+3. Bajas: menciona lesiones o sanciones (tarjeta roja / acumulación) SOLO si aparecen de forma explícita en las noticias de arriba, dando prioridad a las surgidas en el partido anterior (octavos). Si no hay información clara, NO inventes bajas ni asumas ausencias.
+4. Nunca afirmes que un equipo se retiró o no participa.
+5. "recent_form" debe reflejar los resultados reales recientes, priorizando los partidos de eliminatorias.
+6. "key_players": jugadores disponibles que hayan destacado en estas rondas; no incluyas a quienes las noticias señalen como ausentes.
+7. "analysis_text" debe ser DETALLADO (5 a 7 oraciones) y citar datos concretos de dieciseisavos y octavos que sustenten el marcador previsto.
+
+Responde ÚNICAMENTE con este JSON, sin texto antes ni después, sin markdown:
+${jsonSchema}
+
+Los tres porcentajes deben sumar exactamente 100.`
+      : `Eres un analista deportivo experto en fútbol. Analiza este partido del Mundial FIFA 2026 basándote en el rendimiento real de cada selección en el torneo.
+
+PARTIDO: ${homeTeam} vs ${awayTeam}
+FASE: ${match.phase}
+FECHA: ${match.match_date}
+SEDE: ${match.city}
+
+RENDIMIENTO EN EL TORNEO (datos oficiales):
+${perfHome}
+${perfAway}
+
+NOTICIAS RECIENTES (contexto, puede estar incompleto):
+${homeTeam}:
+${perfCtxHome}
+${awayTeam}:
+${perfCtxAway}
+
+REGLAS:
+1. Centra el análisis en el rendimiento real en el torneo.
+2. NO inventes lesiones ni sanciones; menciónalas solo si aparecen explícitas en las noticias.
+3. Nunca afirmes que un equipo se retiró o no participa.
+4. "recent_form" debe reflejar resultados reales recientes.
+
+Responde ÚNICAMENTE con este JSON, sin texto antes ni después, sin markdown:
+${jsonSchema}
 
 Los tres porcentajes deben sumar exactamente 100.`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
 
